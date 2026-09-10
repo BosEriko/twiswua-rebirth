@@ -80,7 +80,7 @@ class FlightMusic {
   }
 }
 
-export default function TigerFlight() {
+export default function TwisWuaFlight() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const phaseRef = useRef<Phase>("ready");
   const tigerY = useRef(WORLD_H * 0.46);
@@ -259,8 +259,8 @@ export default function TigerFlight() {
   return (
     <main className={styles.shell}>
       <header className={styles.header}>
-        <Link href="/" className={styles.back}>← Games</Link>
-        <strong><span>虎</span> TIGER <i>FLIGHT</i></strong>
+        <Link href="/" className={styles.back}>← Arcade</Link>
+        <strong><span>虎</span> TWISWUA <i>FLIGHT</i></strong>
         <div className={styles.headerRight}>
           <button className={styles.music} onClick={toggleMusic} aria-label={muted ? "Turn music on" : "Turn music off"} aria-pressed={!muted}>
             ♫ {muted ? "OFF" : "ON"}
@@ -268,18 +268,18 @@ export default function TigerFlight() {
           <span className={styles.best}>BEST {best}</span>
         </div>
       </header>
-      <section className={styles.game} aria-label="Tiger Flight game">
+      <section className={styles.game} aria-label="TwisWua Flight game">
         <canvas
           ref={canvasRef}
           width={WORLD_W}
           height={WORLD_H}
           onPointerDown={(event) => { event.preventDefault(); flap(); }}
-          aria-label="Tiger Flight. Tap or click to flap. On desktop, Space also flaps."
+          aria-label="TwisWua Flight. Tap or click to flap. On desktop, Space also flaps."
         />
         {phase !== "playing" && (
           <div className={styles.overlay} onPointerDown={(event) => { event.preventDefault(); flap(); }}>
             <div>
-              <p>{phase === "ready" ? "A LITTLE TIGER. A LOT OF AIR." : `SCORE ${score}`}</p>
+              <p>{phase === "ready" ? "A LITTLE TWISWUA. A LOT OF AIR." : `SCORE ${score}`}</p>
               <h1>{phase === "ready" ? <>Take to the <em>trees.</em></> : <>Branches <em>happen.</em></>}</h1>
               <span>{phase === "ready" ? "Tap, click, or press Space to fly" : "Tap, click, or press Space to try again"}</span>
             </div>
