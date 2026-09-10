@@ -4,14 +4,14 @@ import styles from "./hub.module.css";
 const games = [
   {
     href: "/survival",
-    title: "Tiger Tide",
+    title: "TwisWua Survival",
     subtitle: "Survival",
     icon: "虎",
     className: styles.survivalIcon,
   },
   {
     href: "/flappy",
-    title: "Tiger Flight",
+    title: "TwisWua Flight",
     subtitle: "Arcade",
     icon: "🐯",
     className: styles.flightIcon,
@@ -30,15 +30,15 @@ export default function Page() {
       <header className={styles.statusBar}>
         <div className={styles.brand}>
           <span className={styles.brandMark}>虎</span>
-          <span>TWISWUA</span>
+          <span>TwisWua&apos;s Arcade Room</span>
         </div>
-        <span className={styles.status}>FIELD GAMES</span>
+        <span className={styles.status}>GAME SELECT</span>
       </header>
 
       <section className={styles.homeScreen}>
         <div className={styles.heading}>
-          <p>WELCOME BACK</p>
-          <h1>Pick a game.</h1>
+          <p>WELCOME TO</p>
+          <h1>TwisWua&apos;s Arcade Room</h1>
           <span>Tap an icon to play full screen.</span>
         </div>
 
