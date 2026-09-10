@@ -60,7 +60,7 @@ export default function HandheldControls({
   return (
     <section className="handheld-controls" aria-label="Handheld controller">
       <div className="console-wordmark">
-        TIGER TIDE <span>pocket</span>
+        TWISWUA <span>pocket</span>
         <small>8-BIT WILD EDITION</small>
       </div>
       <div className="control-row">
