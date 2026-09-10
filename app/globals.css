@@ -824,14 +824,12 @@ footer span span {
     min-height: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(
-        0,
-        calc(50svh - 44px - env(safe-area-inset-top, 0px))
-      ) minmax(0, 1fr);
-    grid-template-rows: minmax(
-        0,
-        calc(50dvh - 44px - env(safe-area-inset-top, 0px))
-      ) minmax(0, 1fr);
+    grid-template-rows:
+      minmax(0, calc(50svh - 44px - env(safe-area-inset-top, 0px)))
+      minmax(0, 1fr);
+    grid-template-rows:
+      minmax(0, calc(50dvh - 44px - env(safe-area-inset-top, 0px)))
+      minmax(0, 1fr);
     border: 0;
     border-radius: 0;
     box-shadow: none;
@@ -1247,6 +1245,19 @@ footer span span {
   }
   .upgrade-options small {
     font-size: 8px;
+  }
+  .upgrade-modal {
+    padding: 8px;
+  }
+  .upgrade-modal > .eyebrow,
+  .upgrade-modal > p,
+  .upgrade-modal .modal-hint,
+  .upgrade-options button > span {
+    display: none;
+  }
+  .upgrade-modal h2 {
+    font-size: 18px;
+    margin: 6px 0;
   }
 }
 @media (max-width: 760px) and (max-height: 500px),

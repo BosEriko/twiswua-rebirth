@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
   createRun,
   dash,
@@ -211,6 +211,33 @@ export default function Game() {
     sync();
     canvas.current?.focus({ preventScroll: true });
   }
+  function aim(event: PointerEvent<HTMLCanvasElement>) {
+    if (run.current.phase !== "playing" || event.pointerType === "touch")
+      return;
+    const element = event.currentTarget;
+    const rect = element.getBoundingClientRect();
+    const contained = getComputedStyle(element).objectFit === "contain";
+    const scale = Math.min(rect.width / WIDTH, rect.height / HEIGHT);
+    const width = contained ? WIDTH * scale : rect.width;
+    const height = contained ? HEIGHT * scale : rect.height;
+    run.current.joystick = false;
+    run.current.targetX = Math.max(
+      30,
+      Math.min(
+        WIDTH - 30,
+        ((event.clientX - rect.left - (rect.width - width) / 2) / width) *
+          WIDTH,
+      ),
+    );
+    run.current.targetY = Math.max(
+      30,
+      Math.min(
+        HEIGHT - 30,
+        ((event.clientY - rect.top - (rect.height - height) / 2) / height) *
+          HEIGHT,
+      ),
+    );
+  }
   function togglePause() {
     if (run.current.phase === "playing") {
       run.current.phase = "paused";
@@ -310,38 +337,11 @@ export default function Game() {
               height={HEIGHT}
               tabIndex={0}
               aria-label="Game arena. Use the joystick on mobile or your mouse on desktop. Arrow keys also move. P pauses."
-              onPointerMove={(e) => {
-                if (
-                  run.current.phase !== "playing" ||
-                  e.pointerType !== "mouse"
-                )
-                  return;
-                run.current.joystick = false;
-                const rect = e.currentTarget.getBoundingClientRect();
-                run.current.targetX = Math.max(
-                  30,
-                  Math.min(
-                    WIDTH - 30,
-                    ((e.clientX - rect.left) / rect.width) * WIDTH,
-                  ),
-                );
-                run.current.targetY = Math.max(
-                  30,
-                  Math.min(
-                    HEIGHT - 30,
-                    ((e.clientY - rect.top) / rect.height) * HEIGHT,
-                  ),
-                );
-              }}
+              onPointerMove={aim}
               onPointerDown={(e) => {
-                if (e.pointerType !== "mouse") return;
+                if (e.pointerType === "touch") return;
                 e.currentTarget.focus({ preventScroll: true });
-                run.current.joystick = false;
-                const rect = e.currentTarget.getBoundingClientRect();
-                run.current.targetX =
-                  ((e.clientX - rect.left) / rect.width) * WIDTH;
-                run.current.targetY =
-                  ((e.clientY - rect.top) / rect.height) * HEIGHT;
+                aim(e);
                 e.currentTarget.setPointerCapture(e.pointerId);
               }}
             />
@@ -437,7 +437,14 @@ export default function Game() {
                     ) : phase === "over" ? (
                       `Legacy bonus: +${Math.min(record.runs, 10) * 5} starting health on your next run`
                     ) : phase === "paused" ? (
-                      "PRESS P OR ESC TO RESUME"
+                      <>
+                        <span className="desktop-hint">
+                          PRESS P OR ESC TO RESUME
+                        </span>
+                        <span className="mobile-hint">
+                          PRESS RESUME WHEN YOU’RE READY
+                        </span>
+                      </>
                     ) : (
                       "A fresh flock is on its way."
                     )}

@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createRun, dash, moveJoystick, roar, tick, upgrade, waveSize } from "../lib/game.ts";
+import {
+  createRun,
+  dash,
+  moveJoystick,
+  roar,
+  tick,
+  upgrade,
+  waveSize,
+} from "../lib/game.ts";
 
 test("tiger follows the pointer without overshooting", () => {
   const run = createRun();
@@ -117,8 +125,11 @@ test("diagonal joystick movement is bounded to normal speed and arena edges", ()
   run.spawnClock = 100;
   moveJoystick(run, 10, 10);
   tick(run, 0.05);
-  assert.ok(Math.abs(Math.hypot(run.x - 500, run.y - 320) - run.speed * 0.05) < 0.001);
-  run.x = 969; run.y = 589;
+  assert.ok(
+    Math.abs(Math.hypot(run.x - 500, run.y - 320) - run.speed * 0.05) < 0.001,
+  );
+  run.x = 969;
+  run.y = 589;
   tick(run, 0.05);
   assert.equal(run.x, 970);
   assert.equal(run.y, 590);
