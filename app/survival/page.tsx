@@ -1,5 +1,10 @@
 import Game from "../game";
+import BrandSwap from "./brand-swap";
 
 export default function SurvivalPage() {
-  return <Game />;
+  return (
+    <BrandSwap>
+      <Game />
+    </BrandSwap>
+  );
 }
