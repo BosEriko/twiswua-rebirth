@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createRun, tick, upgrade, waveSize } from "../lib/game.ts";
+import { createRun, dash, moveJoystick, roar, tick, upgrade, waveSize } from "../lib/game.ts";
 
 test("tiger follows the pointer without overshooting", () => {
   const run = createRun();
@@ -95,4 +95,90 @@ test("spawn budget stays bounded and later waves introduce stronger ducks", () =
   run.spawnClock = 0;
   tick(run, 0.01, () => 0);
   assert.equal(run.spawned, waveSize(4));
+});
+
+test("joystick moves continuously and release stops immediately", () => {
+  const run = createRun();
+  run.phase = "playing";
+  run.spawnClock = 100;
+  moveJoystick(run, 1, 0);
+  for (let i = 0; i < 10; i++) tick(run, 0.05);
+  assert.ok(run.x > 600);
+  assert.equal(run.y, 320);
+  moveJoystick(run, 0, 0);
+  const x = run.x;
+  tick(run, 0.05);
+  assert.equal(run.x, x);
+});
+
+test("diagonal joystick movement is bounded to normal speed and arena edges", () => {
+  const run = createRun();
+  run.phase = "playing";
+  run.spawnClock = 100;
+  moveJoystick(run, 10, 10);
+  tick(run, 0.05);
+  assert.ok(Math.abs(Math.hypot(run.x - 500, run.y - 320) - run.speed * 0.05) < 0.001);
+  run.x = 969; run.y = 589;
+  tick(run, 0.05);
+  assert.equal(run.x, 970);
+  assert.equal(run.y, 590);
+});
+
+test("A dashes in the last movement direction and respects cooldown and pause", () => {
+  const run = createRun();
+  run.phase = "playing";
+  run.spawnClock = 100;
+  moveJoystick(run, -1, 0);
+  tick(run, 0.05);
+  moveJoystick(run, 0, 0);
+  dash(run);
+  assert.equal(run.dashCooldown, 3);
+  assert.equal(run.invincible, 0.25);
+  const x = run.x;
+  tick(run, 0.05);
+  assert.ok(x - run.x > run.speed * 0.05);
+  const cooldown = run.dashCooldown;
+  dash(run);
+  assert.equal(run.dashCooldown, cooldown);
+  run.phase = "paused";
+  const before = structuredClone(run);
+  tick(run, 0.05);
+  dash(run);
+  assert.deepEqual(run, before);
+});
+
+test("B damages and repels nearby ducks but leaves distant ducks alone", () => {
+  const run = createRun();
+  run.phase = "playing";
+  run.spawnClock = 100;
+  run.attack = 100;
+  run.ducks = [
+    { x: 540, y: 320, hp: 1, elite: false },
+    { x: 550, y: 320, hp: 5, elite: true },
+    { x: 800, y: 320, hp: 1, elite: false },
+  ];
+  roar(run);
+  assert.equal(run.roarCooldown, 6);
+  assert.equal(run.ducks[1].hp, 3);
+  assert.equal(run.ducks[1].x, 625);
+  assert.equal(run.ducks[2].hp, 1);
+  roar(run);
+  assert.equal(run.ducks[1].hp, 3);
+  tick(run, 0.01);
+  assert.equal(run.kills, 1);
+  assert.equal(run.ducks.length, 2);
+});
+
+test("abilities cannot activate outside a live run and reset on restart", () => {
+  for (const phase of ["ready", "paused", "upgrade", "over"] as const) {
+    const run = createRun();
+    run.phase = phase;
+    const before = structuredClone(run);
+    dash(run);
+    roar(run);
+    assert.deepEqual(run, before);
+  }
+  const fresh = createRun(3);
+  assert.equal(fresh.dashCooldown, 0);
+  assert.equal(fresh.roarCooldown, 0);
 });

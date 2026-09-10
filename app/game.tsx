@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   createRun,
+  dash,
   HEIGHT,
+  moveJoystick,
+  roar,
   tick,
   upgrade,
   waveSize,
@@ -11,6 +14,8 @@ import {
   type Upgrade,
 } from "../lib/game";
 import { draw } from "../lib/draw";
+import { Chiptune } from "../lib/music";
+import HandheldControls from "./handheld-controls";
 
 const choices: {
   id: Upgrade;
@@ -48,12 +53,25 @@ export default function Game() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const helpDialog = useRef<HTMLDialogElement>(null);
   const run = useRef(createRun());
+  const music = useRef<Chiptune | null>(null);
+  const mutedRef = useRef(false);
+  const [muted, setMuted] = useState(false);
   const [hud, setHud] = useState({ ...run.current });
   const [record, setRecord] = useState({ best: 0, runs: 0 });
   const recordRef = useRef(record);
   const [help, setHelp] = useState(false);
   const [storageUnavailable, setStorageUnavailable] = useState(false);
   const sync = () => setHud({ ...run.current });
+
+  function playMusic() {
+    if (mutedRef.current) return;
+    music.current ??= new Chiptune();
+    music.current.play();
+  }
+
+  function stopMovement() {
+    if (run.current.joystick) moveJoystick(run.current, 0, 0);
+  }
 
   useEffect(() => {
     if (help) helpDialog.current?.showModal();
@@ -89,6 +107,10 @@ export default function Game() {
       const previous = state.phase;
       tick(state, last ? (timestamp - last) / 1000 : 0);
       last = timestamp;
+      if (previous === "playing" && state.phase !== "playing") {
+        stopMovement();
+        music.current?.pause();
+      }
       if (state.phase === "over" && previous !== "over") {
         const next = {
           best: Math.max(recordRef.current.best, state.wave),
@@ -119,6 +141,8 @@ export default function Game() {
     const pause = () => {
       if (run.current.phase === "playing") {
         run.current.phase = "paused";
+        stopMovement();
+        music.current?.pause();
         setHud({ ...run.current });
       }
     };
@@ -131,6 +155,7 @@ export default function Game() {
         if (run.current.phase === "playing") pause();
         else if (run.current.phase === "paused") {
           run.current.phase = "playing";
+          playMusic();
           setHud({ ...run.current });
         }
       }
@@ -146,6 +171,7 @@ export default function Game() {
       };
       if (directions[event.code] && run.current.phase === "playing") {
         event.preventDefault();
+        run.current.joystick = false;
         const [x, y] = directions[event.code];
         run.current.targetX = Math.max(
           30,
@@ -156,34 +182,51 @@ export default function Game() {
           Math.min(HEIGHT - 30, run.current.targetY + y),
         );
       }
+      if (!event.repeat && event.code === "KeyJ") dash(run.current);
+      if (!event.repeat && event.code === "KeyK") roar(run.current);
     };
     window.addEventListener("keydown", key);
     window.addEventListener("blur", pause);
     document.addEventListener("visibilitychange", visibility);
+    const handheld = window.matchMedia(
+      "(max-width: 760px), (pointer: coarse) and (max-width: 1024px) and (max-height: 600px)",
+    );
+    handheld.addEventListener("change", pause);
     return () => {
       cancelAnimationFrame(frame);
+      music.current?.dispose();
+      music.current = null;
       window.removeEventListener("keydown", key);
       window.removeEventListener("blur", pause);
       document.removeEventListener("visibilitychange", visibility);
+      handheld.removeEventListener("change", pause);
     };
   }, []);
 
   function start() {
     run.current = createRun(recordRef.current.runs);
     run.current.phase = "playing";
+    playMusic();
     setHelp(false);
     sync();
-    canvas.current?.focus();
+    canvas.current?.focus({ preventScroll: true });
   }
   function togglePause() {
-    if (run.current.phase === "playing") run.current.phase = "paused";
-    else if (run.current.phase === "paused") run.current.phase = "playing";
+    if (run.current.phase === "playing") {
+      run.current.phase = "paused";
+      stopMovement();
+      music.current?.pause();
+    } else if (run.current.phase === "paused") {
+      run.current.phase = "playing";
+      playMusic();
+    }
     sync();
   }
   function select(choice: Upgrade) {
     upgrade(run.current, choice);
+    playMusic();
     sync();
-    canvas.current?.focus();
+    canvas.current?.focus({ preventScroll: true });
   }
   const phase = hud.phase;
   return (
@@ -194,18 +237,35 @@ export default function Game() {
           <span className="brand-light">TIDE</span>
           <span className="edition">FIELD NOTES / 001</span>
         </a>
-        <button
-          className="text-button"
-          onClick={() => {
-            if (run.current.phase === "playing") {
-              run.current.phase = "paused";
-              sync();
-            }
-            setHelp(true);
-          }}
-        >
-          How to play <span>↗</span>
-        </button>
+        <div className="header-actions">
+          <button
+            className="music-button"
+            aria-label={muted ? "Enable music" : "Mute music"}
+            aria-pressed={!muted}
+            onClick={() => {
+              mutedRef.current = !mutedRef.current;
+              setMuted(mutedRef.current);
+              if (mutedRef.current) music.current?.pause();
+              else if (run.current.phase === "playing") playMusic();
+            }}
+          >
+            <span aria-hidden="true">♫</span> {muted ? "OFF" : "ON"}
+          </button>
+          <button
+            className="text-button"
+            onClick={() => {
+              if (run.current.phase === "playing") {
+                run.current.phase = "paused";
+                stopMovement();
+                music.current?.pause();
+                sync();
+              }
+              setHelp(true);
+            }}
+          >
+            How to play <span>↗</span>
+          </button>
+        </div>
       </header>
 
       <section className="intro">
@@ -249,9 +309,14 @@ export default function Game() {
               width={WIDTH}
               height={HEIGHT}
               tabIndex={0}
-              aria-label="Game arena. Move your mouse or drag to guide the tiger. Arrow keys also move. P pauses."
+              aria-label="Game arena. Use the joystick on mobile or your mouse on desktop. Arrow keys also move. P pauses."
               onPointerMove={(e) => {
-                if (run.current.phase !== "playing") return;
+                if (
+                  run.current.phase !== "playing" ||
+                  e.pointerType !== "mouse"
+                )
+                  return;
+                run.current.joystick = false;
                 const rect = e.currentTarget.getBoundingClientRect();
                 run.current.targetX = Math.max(
                   30,
@@ -269,7 +334,9 @@ export default function Game() {
                 );
               }}
               onPointerDown={(e) => {
-                e.currentTarget.focus();
+                if (e.pointerType !== "mouse") return;
+                e.currentTarget.focus({ preventScroll: true });
+                run.current.joystick = false;
                 const rect = e.currentTarget.getBoundingClientRect();
                 run.current.targetX =
                   ((e.clientX - rect.left) / rect.width) * WIDTH;
@@ -358,22 +425,55 @@ export default function Game() {
                     </button>
                   )}
                   <small className="modal-hint">
-                    {phase === "ready"
-                      ? "MOVE YOUR MOUSE. WE’LL HANDLE THE CLAWS."
-                      : phase === "over"
-                        ? `Legacy bonus: +${Math.min(record.runs, 10) * 5} starting health on your next run`
-                        : phase === "paused"
-                          ? "PRESS P OR ESC TO RESUME"
-                          : "A fresh flock is on its way."}
+                    {phase === "ready" ? (
+                      <>
+                        <span className="desktop-hint">
+                          MOVE YOUR MOUSE. WE’LL HANDLE THE CLAWS.
+                        </span>
+                        <span className="mobile-hint">
+                          JOYSTICK TO MOVE · A DASH · B ROAR
+                        </span>
+                      </>
+                    ) : phase === "over" ? (
+                      `Legacy bonus: +${Math.min(record.runs, 10) * 5} starting health on your next run`
+                    ) : phase === "paused" ? (
+                      "PRESS P OR ESC TO RESUME"
+                    ) : (
+                      "A fresh flock is on its way."
+                    )}
                   </small>
                 </div>
               </div>
             )}
           </div>
+          <div className="mobile-hud">
+            <div className="mobile-vitality">
+              <span>
+                ♥ {Math.ceil(hud.hp)} / {hud.maxHp}
+              </span>
+              <div
+                role="progressbar"
+                aria-label="Tiger health"
+                aria-valuenow={Math.ceil(hud.hp)}
+                aria-valuemin={0}
+                aria-valuemax={hud.maxHp}
+              >
+                <i style={{ width: `${(hud.hp / hud.maxHp) * 100}%` }} />
+              </div>
+            </div>
+            <span>
+              WAVE <b>{String(hud.wave).padStart(2, "0")}</b>
+            </span>
+            <span>
+              DUCKS <b>{hud.kills}</b>
+            </span>
+            <span>{formatTime(hud.time)}</span>
+          </div>
           <div className="arena-bottom">
             <span>
               <span className="mouse-icon">↖</span> Move to explore{" "}
-              <span className="bottom-separator">·</span> Auto-attack is on
+              <span className="bottom-separator">·</span> Auto-attack · J dash ·
+              K roar
             </span>
             <button
               disabled={phase !== "playing" && phase !== "paused"}
@@ -481,6 +581,22 @@ export default function Game() {
             </p>
           )}
         </aside>
+        <HandheldControls
+          phase={phase}
+          dashCooldown={hud.dashCooldown}
+          roarCooldown={hud.roarCooldown}
+          onMove={(x, y) => moveJoystick(run.current, x, y)}
+          onDash={() => {
+            dash(run.current);
+            sync();
+          }}
+          onRoar={() => {
+            roar(run.current);
+            sync();
+          }}
+          onStart={start}
+          onPause={togglePause}
+        />
       </section>
       <section className="field-guide">
         <div className="guide-heading">
@@ -543,15 +659,14 @@ export default function Game() {
           if (e.target === e.currentTarget) setHelp(false);
         }}
       >
-        <section
-          className="help-dialog"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <section className="help-dialog" onClick={(e) => e.stopPropagation()}>
           <div className="eyebrow">A QUICK FIELD BRIEFING</div>
           <h2 id="help-title">Trust your instincts.</h2>
           <p>
-            Move your mouse inside the glade to lead your tiger. On
-            touchscreens, drag a finger. Arrow keys or WASD also work.
+            On mobile, hold the joystick to move and release it to stop. A
+            dashes through danger; B roars to damage and push back nearby ducks.
+            On desktop, use your mouse or arrow keys / WASD, with J to dash and
+            K to roar.
           </p>
           <p>
             Your claws automatically swipe at nearby ducks. Keep moving to avoid
@@ -560,6 +675,10 @@ export default function Game() {
           <p>
             Press P or Escape to pause. Each completed run earns +5 starting
             health for future runs, up to +50, saved in this browser.
+          </p>
+          <p>
+            Music starts when you play. Use the ♫ button to mute or enable the
+            8-bit soundtrack.
           </p>
           <button
             autoFocus

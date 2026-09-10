@@ -89,7 +89,8 @@ export function roar(run: Run) {
   run.roar = 0.35;
   run.roarCooldown = 6;
   for (const duck of run.ducks) {
-    const dx = duck.x - run.x, dy = duck.y - run.y;
+    const dx = duck.x - run.x,
+      dy = duck.y - run.y;
     const distance = Math.hypot(dx, dy);
     if (distance < 160) {
       duck.hp -= run.damage * 2;
@@ -125,13 +126,21 @@ export function tick(run: Run, elapsed: number, random = Math.random) {
   run.roarCooldown = Math.max(0, run.roarCooldown - dt);
   run.roar = Math.max(0, run.roar - dt);
   const dashing = run.dash > 0;
-  const dx = dashing ? run.facingX : run.joystick ? run.moveX : run.targetX - run.x,
+  const dx = dashing
+      ? run.facingX
+      : run.joystick
+        ? run.moveX
+        : run.targetX - run.x,
     dy = dashing ? run.facingY : run.joystick ? run.moveY : run.targetY - run.y;
   const distance = Math.hypot(dx, dy);
   if (distance > (run.joystick || dashing ? 0.01 : 2)) {
     run.facingX = dx / distance;
     run.facingY = dy / distance;
-    const step = dashing ? run.speed * 3.5 * dt : run.joystick ? run.speed * Math.min(1, distance) * dt : Math.min(distance, run.speed * dt);
+    const step = dashing
+      ? run.speed * 3.5 * dt
+      : run.joystick
+        ? run.speed * Math.min(1, distance) * dt
+        : Math.min(distance, run.speed * dt);
     run.x = Math.max(30, Math.min(WIDTH - 30, run.x + (dx / distance) * step));
     run.y = Math.max(30, Math.min(HEIGHT - 30, run.y + (dy / distance) * step));
   }
