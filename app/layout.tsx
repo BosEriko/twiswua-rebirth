@@ -2,9 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tiger Tide — A tiny tiger. A whole lot of ducks.",
-  description:
-    "Follow your instinct. Survive the flock. A mouse-controlled jungle roguelite.",
+  title: "Tiger Tide — Twiswua Field Games",
+  description: "Tiny tiger games built for desktop and mobile.",
 };
 
 export const viewport: Viewport = {
