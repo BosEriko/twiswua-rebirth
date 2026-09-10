@@ -17,6 +17,69 @@ const SPEED = 128;
 const GRAVITY = 1050;
 const FLAP = -370;
 
+class FlightMusic {
+  private context: AudioContext | null = null;
+  private timer: number | null = null;
+  private step = 0;
+  private muted = false;
+
+  setMuted(muted: boolean) {
+    this.muted = muted;
+    if (muted) this.stop();
+  }
+
+  async play() {
+    if (this.muted || this.timer !== null) return;
+    this.context ??= new AudioContext();
+    if (this.context.state === "suspended") await this.context.resume();
+    this.step = 0;
+    this.tick();
+    this.timer = window.setInterval(() => this.tick(), 185);
+  }
+
+  stop() {
+    if (this.timer !== null) window.clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  dispose() {
+    this.stop();
+    void this.context?.close();
+    this.context = null;
+  }
+
+  private tick() {
+    if (!this.context || this.muted) return;
+    const melody = [659.25, 783.99, 880, 783.99, 659.25, 523.25, 587.33, 659.25, 783.99, 987.77, 880, 783.99, 659.25, 587.33, 523.25, 587.33];
+    const bass = [164.81, 164.81, 196, 196, 146.83, 146.83, 174.61, 174.61];
+    const now = this.context.currentTime;
+
+    const lead = this.context.createOscillator();
+    const leadGain = this.context.createGain();
+    lead.type = "square";
+    lead.frequency.value = melody[this.step % melody.length];
+    leadGain.gain.setValueAtTime(0.025, now);
+    leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    lead.connect(leadGain).connect(this.context.destination);
+    lead.start(now);
+    lead.stop(now + 0.15);
+
+    if (this.step % 2 === 0) {
+      const low = this.context.createOscillator();
+      const lowGain = this.context.createGain();
+      low.type = "triangle";
+      low.frequency.value = bass[Math.floor(this.step / 2) % bass.length];
+      lowGain.gain.setValueAtTime(0.035, now);
+      lowGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      low.connect(lowGain).connect(this.context.destination);
+      low.start(now);
+      low.stop(now + 0.29);
+    }
+
+    this.step += 1;
+  }
+}
+
 export default function TigerFlight() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const phaseRef = useRef<Phase>("ready");
@@ -24,9 +87,18 @@ export default function TigerFlight() {
   const velocity = useRef(0);
   const trees = useRef<Tree[]>([]);
   const scoreRef = useRef(0);
+  const musicRef = useRef<FlightMusic | null>(null);
+  const mutedRef = useRef(false);
   const [phase, setPhase] = useState<Phase>("ready");
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
+  const [muted, setMuted] = useState(false);
+
+  const playMusic = useCallback(() => {
+    musicRef.current ??= new FlightMusic();
+    musicRef.current.setMuted(mutedRef.current);
+    void musicRef.current.play();
+  }, []);
 
   const reset = useCallback(() => {
     tigerY.current = WORLD_H * 0.46;
@@ -41,23 +113,24 @@ export default function TigerFlight() {
   }, []);
 
   const flap = useCallback(() => {
-    if (phaseRef.current === "over") {
+    if (phaseRef.current === "over" || phaseRef.current === "ready") {
       reset();
       phaseRef.current = "playing";
       setPhase("playing");
-    } else if (phaseRef.current === "ready") {
-      reset();
-      phaseRef.current = "playing";
-      setPhase("playing");
+      playMusic();
     }
     velocity.current = FLAP;
-  }, [reset]);
+  }, [playMusic, reset]);
 
   useEffect(() => {
     try {
       setBest(Math.max(0, Number(localStorage.getItem("tiger-flight-best") || 0)));
+      const savedMuted = localStorage.getItem("tiger-flight-muted") === "1";
+      mutedRef.current = savedMuted;
+      setMuted(savedMuted);
     } catch {}
     reset();
+    return () => musicRef.current?.dispose();
   }, [reset]);
 
   useEffect(() => {
@@ -67,9 +140,17 @@ export default function TigerFlight() {
         flap();
       }
     };
+    const visibility = () => {
+      if (document.hidden) musicRef.current?.stop();
+      else if (phaseRef.current === "playing") playMusic();
+    };
     window.addEventListener("keydown", keydown);
-    return () => window.removeEventListener("keydown", keydown);
-  }, [flap]);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.removeEventListener("keydown", keydown);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [flap, playMusic]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -82,6 +163,7 @@ export default function TigerFlight() {
       if (phaseRef.current !== "playing") return;
       phaseRef.current = "over";
       setPhase("over");
+      musicRef.current?.stop();
       setBest((current) => {
         const next = Math.max(current, scoreRef.current);
         try { localStorage.setItem("tiger-flight-best", String(next)); } catch {}
@@ -165,12 +247,26 @@ export default function TigerFlight() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  const toggleMusic = () => {
+    mutedRef.current = !mutedRef.current;
+    setMuted(mutedRef.current);
+    musicRef.current ??= new FlightMusic();
+    musicRef.current.setMuted(mutedRef.current);
+    try { localStorage.setItem("tiger-flight-muted", mutedRef.current ? "1" : "0"); } catch {}
+    if (!mutedRef.current && phaseRef.current === "playing") playMusic();
+  };
+
   return (
     <main className={styles.shell}>
       <header className={styles.header}>
         <Link href="/" className={styles.back}>← Games</Link>
         <strong><span>虎</span> TIGER <i>FLIGHT</i></strong>
-        <span className={styles.best}>BEST {best}</span>
+        <div className={styles.headerRight}>
+          <button className={styles.music} onClick={toggleMusic} aria-label={muted ? "Turn music on" : "Turn music off"} aria-pressed={!muted}>
+            ♫ {muted ? "OFF" : "ON"}
+          </button>
+          <span className={styles.best}>BEST {best}</span>
+        </div>
       </header>
       <section className={styles.game} aria-label="Tiger Flight game">
         <canvas
