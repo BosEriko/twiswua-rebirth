@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Game from "../game";
 import HandheldControls from "../handheld-controls";
 import { draw, tiger } from "../../lib/draw";
-import { HEIGHT, WIDTH, type Upgrade } from "../../lib/game";
+import { HEIGHT, WIDTH, powerups, type Upgrade } from "../../lib/game";
 import { useRoom } from "./use-room";
 import styles from "./survival.module.css";
 
@@ -51,6 +51,7 @@ export default function Survival() {
             phase: state.world.phase,
             ducks: state.world.ducks,
             particles: state.world.particles,
+            projectiles: state.world.projectiles,
           },
           now / 1000,
         );
@@ -158,8 +159,15 @@ export default function Survival() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <a className="brand" href="/">
-          <span className="brand-mark">虎</span> TWISWUA
+        <a
+          className="brand survival-brand"
+          href="/"
+          aria-label="TwisWua Survival home"
+        >
+          <span className="brand-mark" aria-hidden="true">
+            🐯
+          </span>{" "}
+          TwisWua Survival
         </a>
         <div className={styles.actions}>
           {!code && (
@@ -357,13 +365,7 @@ export default function Survival() {
                     </p>
                     {player && player.hp > 0 && (
                       <div className={styles.actions}>
-                        {(
-                          [
-                            ["claws", "Sharper claws · +1 damage"],
-                            ["haste", "Wild instinct · faster attacks"],
-                            ["heart", "Jungle heart · +25 max HP"],
-                          ] as const
-                        ).map(([choice, label]) => (
+                        {room.state.world.upgradeChoices.map((choice) => (
                           <button
                             className={styles.button}
                             key={choice}
@@ -376,7 +378,8 @@ export default function Survival() {
                               room.members[user!.uid]?.input.upgrade === choice
                             }
                           >
-                            {label}
+                            {powerups[choice].icon} {powerups[choice].title} —{" "}
+                            {powerups[choice].description}
                           </button>
                         ))}
                       </div>

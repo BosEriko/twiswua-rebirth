@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { powerups } from "../lib/game.ts";
 import {
   createSession,
   emptyInput,
@@ -127,6 +128,19 @@ test("RTDB enforces room ownership, capacity, input validation, and lobby-only j
       ).status,
       200,
     );
+    for (const choice of Object.keys(powerups)) {
+      assert.equal(
+        (
+          await request(
+            `${path}/members/${guest.localId}/input/upgrade`,
+            "PUT",
+            choice,
+            guest.idToken,
+          )
+        ).status,
+        200,
+      );
+    }
     assert.equal(
       (await request(`${path}/state/world/phase`, "PUT", "playing")).status,
       200,

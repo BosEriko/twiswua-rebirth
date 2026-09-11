@@ -43,7 +43,7 @@
                   ".validate": "newData.isBoolean()"
                 },
                 "upgrade": {
-                  ".validate": "newData.val() === '' || newData.val() === 'claws' || newData.val() === 'haste' || newData.val() === 'heart'"
+                  ".validate": "newData.val() === '' || newData.val() === 'claws' || newData.val() === 'haste' || newData.val() === 'heart' || newData.val() === 'reach' || newData.val() === 'armor' || newData.val() === 'recovery' || newData.val() === 'dash' || newData.val() === 'roar'"
                 },
                 "$other": {
                   ".validate": false

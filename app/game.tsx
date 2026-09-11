@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import {
   createRun,
   dash,
   HEIGHT,
   moveJoystick,
   roar,
+  powerups,
   tick,
   upgrade,
   waveSize,
@@ -17,31 +24,6 @@ import { draw } from "../lib/draw";
 import { Chiptune } from "../lib/music";
 import HandheldControls from "./handheld-controls";
 
-const choices: {
-  id: Upgrade;
-  icon: string;
-  title: string;
-  description: string;
-}[] = [
-  {
-    id: "claws",
-    icon: "✦",
-    title: "Sharper claws",
-    description: "+1 damage to every swipe. Make feathers fly.",
-  },
-  {
-    id: "haste",
-    icon: "ϟ",
-    title: "Wild instinct",
-    description: "Attack 15% faster and move a little quicker.",
-  },
-  {
-    id: "heart",
-    icon: "♡",
-    title: "Heart of the jungle",
-    description: "+25 maximum health. Recover 50 health.",
-  },
-];
 const formatTime = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -49,7 +31,11 @@ const formatTime = (seconds: number) =>
     .toString()
     .padStart(2, "0")}`;
 
-export default function Game({ onlineControls }: { onlineControls?: ReactNode }) {
+export default function Game({
+  onlineControls,
+}: {
+  onlineControls?: ReactNode;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const helpDialog = useRef<HTMLDialogElement>(null);
   const run = useRef(createRun());
@@ -259,9 +245,15 @@ export default function Game({ onlineControls }: { onlineControls?: ReactNode })
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="/" aria-label="Tiger Tide home">
-          <span className="brand-mark">虎</span> TIGER
-          <span className="brand-light">TIDE</span>
+        <a
+          className="brand survival-brand"
+          href="/"
+          aria-label="TwisWua Survival home"
+        >
+          <span className="brand-mark" aria-hidden="true">
+            🐯
+          </span>{" "}
+          TwisWua <span className="brand-light">Survival</span>
           <span className="edition">FIELD NOTES / 001</span>
         </a>
         <div className="header-actions">
@@ -321,7 +313,7 @@ export default function Game({ onlineControls }: { onlineControls?: ReactNode })
         </div>
       </section>
 
-      <section className="game-layout" aria-label="Tiger Tide game">
+      <section className="game-layout" aria-label="TwisWua Survival game">
         <div className="game-column">
           <div className="arena-top">
             <span>
@@ -353,8 +345,8 @@ export default function Game({ onlineControls }: { onlineControls?: ReactNode })
               <div className="wave-label">
                 WAVE {String(hud.wave).padStart(2, "0")}{" "}
                 <span>
-                  {hud.spawned - hud.ducks.length} / {waveSize(hud.wave)}{" "}
-                  cleared
+                  {hud.spawned - hud.ducks.length} /{" "}
+                  {waveSize(hud.wave, hud.partySize)} cleared
                 </span>
               </div>
             )}
@@ -401,16 +393,18 @@ export default function Game({ onlineControls }: { onlineControls?: ReactNode })
                   </p>
                   {phase === "upgrade" ? (
                     <div className="upgrade-options">
-                      {choices.map((choice) => (
-                        <button
-                          key={choice.id}
-                          onClick={() => select(choice.id)}
-                        >
-                          <span>{choice.icon}</span>
-                          <strong>{choice.title}</strong>
-                          <small>{choice.description}</small>
-                        </button>
-                      ))}
+                      {hud.upgradeChoices
+                        .map((id) => ({ id, ...powerups[id] }))
+                        .map((choice) => (
+                          <button
+                            key={choice.id}
+                            onClick={() => select(choice.id)}
+                          >
+                            <span>{choice.icon}</span>
+                            <strong>{choice.title}</strong>
+                            <small>{choice.description}</small>
+                          </button>
+                        ))}
                     </div>
                   ) : (
                     <button
@@ -652,7 +646,7 @@ export default function Game({ onlineControls }: { onlineControls?: ReactNode })
       </section>
       <footer>
         <span>
-          TIGER TIDE <span>·</span> MADE FOR YOUR WILD SIDE.
+          TwisWua Survival <span>·</span> MADE FOR YOUR WILD SIDE.
         </span>
         <span>
           No downloads. Just ducks. <span className="footer-flower">✳</span>
@@ -678,7 +672,9 @@ export default function Game({ onlineControls }: { onlineControls?: ReactNode })
           </p>
           <p>
             Your claws automatically swipe at nearby ducks. Keep moving to avoid
-            contact damage. Clear every duck in a wave, then choose an upgrade.
+            contact damage. From wave 5, red-ringed ducks fire aimed shots; keep
+            moving when their beaks flash. Clear every duck in a wave, then
+            choose one of three random upgrades.
           </p>
           <p>
             Press P or Escape to pause. Each completed run earns +5 starting

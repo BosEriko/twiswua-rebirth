@@ -58,14 +58,14 @@ test("team attacks kill shared enemies once", () => {
 test("upgrade waits for every living player and rejects stale wave choices", () => {
   const session = createSession(["a", "b"]);
   session.world.phase = "playing";
-  session.world.spawned = waveSize(1);
+  session.world.spawned = waveSize(1, 2);
   const team = members();
-  stepSession(session, team, 0.01);
+  stepSession(session, team, 0.01, () => 0);
   assert.equal(session.world.phase, "upgrade");
   team.a.input.upgrade = "claws";
   team.a.input.upgradeWave = 1;
   team.b.input.upgrade = "heart";
-  stepSession(session, team, 0.01);
+  stepSession(session, team, 0.01, () => 0);
   assert.equal(session.world.phase, "upgrade");
   team.b.input.upgradeWave = 1;
   stepSession(session, team, 0.01);
@@ -78,6 +78,7 @@ test("upgrade waits for every living player and rejects stale wave choices", () 
 test("fallen teammate revives when surviving teammate upgrades", () => {
   const session = createSession(["a", "b"]);
   session.world.phase = "upgrade";
+  session.world.upgradeChoices = ["claws", "haste", "heart"];
   session.players.b.hp = 0;
   const team = members();
   team.a.input.upgrade = "haste";
@@ -103,6 +104,7 @@ test("an ability input is consumed once even after cooldown expires", () => {
 test("disconnected players stop blocking upgrades; losing all living players ends a wave", () => {
   const session = createSession(["a", "b"]);
   session.world.phase = "upgrade";
+  session.world.upgradeChoices = ["claws", "haste", "heart"];
   const team = members();
   delete team.b;
   session.players.a.hp = 0;
@@ -123,6 +125,8 @@ test("RTDB omitted empty arrays are restored before gameplay", () => {
   stepSession(wire, members(), 0.01);
   assert.equal(wire.world.ducks.length, 1);
   assert.ok(Array.isArray(wire.world.particles));
+  assert.ok(Array.isArray(wire.world.projectiles));
+  assert.ok(Array.isArray(wire.world.upgradeChoices));
 });
 
 test("room codes are shareable and reject database path characters", () => {
@@ -134,13 +138,14 @@ test("room codes are shareable and reject database path characters", () => {
 test("a replay waits for new upgrade choices instead of reusing the previous run", () => {
   const session = createSession(["a", "b"], 2);
   session.world.phase = "upgrade";
+  session.world.upgradeChoices = ["claws", "haste", "heart"];
   const team = members();
   for (const member of Object.values(team)) {
     member.input.upgrade = "heart";
     member.input.upgradeWave = 1;
     member.input.upgradeRound = 1;
   }
-  stepSession(session, team, 0.01);
+  stepSession(session, team, 0.01, () => 0);
   assert.equal(session.world.phase, "upgrade");
   for (const member of Object.values(team)) member.input.upgradeRound = 2;
   stepSession(session, team, 0.01);

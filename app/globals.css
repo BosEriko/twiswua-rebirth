@@ -1389,3 +1389,10 @@ footer span span {
     transition: none !important;
   }
 }
+
+@media (max-width: 760px) {
+  .survival-brand {
+    font-size: 14px;
+    gap: 2px;
+  }
+}

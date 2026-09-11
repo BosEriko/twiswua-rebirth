@@ -1,13 +1,12 @@
-name: Deploy Firestore rules & indexes
+name: Deploy Realtime Database rules
 
 on:
   push:
     branches: [main]
     paths:
-      - firestore.rules
-      - firestore.indexes.json
+      - database.rules.json
       - firebase.json
-      - .github/workflows/deploy-firestore-rules.yml
+      - .github/workflows/deploy-database-rules.yml
 
 permissions:
   contents: read
@@ -22,6 +21,6 @@ jobs:
         with:
           node-version: 22
 
-      - run: npx --yes firebase-tools deploy --only firestore --project twiswua-com --non-interactive --token "$FIREBASE_TOKEN"
+      - run: npx --yes firebase-tools deploy --only database --project twiswua-com --non-interactive --token "$FIREBASE_TOKEN"
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

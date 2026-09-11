@@ -1,4 +1,4 @@
-# Tiger Tide
+# TwisWua Survival
 
 A browser roguelite built with Next.js, React, TypeScript, and Canvas 2D. The game artwork is drawn in code.
 
@@ -17,8 +17,8 @@ Open http://localhost:3000.
 
 - On mobile, the game fills one screen: arena above, handheld controls below. Hold the left joystick to move; release to stop. Use A to dash (3-second cooldown) and B to roar (6-second cooldown).
 - On desktop, move your mouse inside the arena, or use arrow keys / WASD. J dashes and K roars.
-- Claws automatically attack ducks within range. Avoid touching enemies.
-- Defeat every duck to finish a wave and choose a damage, speed, or health upgrade.
+- Claws automatically attack ducks within range. Avoid touching enemies. From wave 5 onward, red-ringed shooting ducks keep their distance and fire aimed projectiles; their beaks flash before firing.
+- Defeat every duck to finish a wave and choose one of three random powerups. The eight-powerup pool includes damage, attack speed, health, claw reach, armor, regeneration, dash recharge, and roar range/recharge. Choices remain fixed until you select; upgrades last for the current run.
 - Press P or Escape to pause. Switching away automatically pauses the game.
 - Runs end at zero health. Restart with a permanent +5 starting health per finished run, capped at +50.
 - Best wave and permanent health progression are stored in this browser. No account or backend is required.
@@ -66,3 +66,9 @@ firebase emulators:exec --only auth,database --project demo-twiswua 'node --expe
 ```
 
 This uses local test identities to check room ownership, four-player capacity, input validation, lobby-only joining, and deletion permissions. It does not contact production Firebase or test Google's OAuth flow.
+
+## Co-op difficulty and automated rule deployment
+
+Each additional player adds 65% to the wave enemy budget, 35% to enemy health, and 20% to the spawn-rate multiplier. Difficulty uses the party size at the start of the wave, including fallen teammates; departures affect the next wave. The host rolls three distinct powerup choices per wave, shares them with the team, and rejects choices outside that menu.
+
+The GitHub workflow `.github/workflows/deploy-database-rules.yml` deploys `database.rules.json` to the `twiswua-com` project when the rules, Firebase configuration, or workflow change on `main`. It uses the existing `FIREBASE_TOKEN` repository secret and Firebase CLI's `--only database` target, as documented in the [Firebase CLI reference](https://firebase.google.com/docs/cli#deploy_specific_firebase_services). Deploy the updated rules along with this release so all eight upgrade choices are accepted.

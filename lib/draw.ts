@@ -67,6 +67,8 @@ function duck(
   y: number,
   elite: boolean,
   time: number,
+  shooter = false,
+  charging = false,
 ) {
   c.save();
   c.translate(x, y + Math.sin(time * 7 + x) * 2);
@@ -78,6 +80,16 @@ function duck(
   ellipse(c, 7, -10, 12, 13, elite ? "#426d52" : "#fffbe8");
   ellipse(c, 19, -7, 8, 4, "#eead45");
   ellipse(c, 10, -13, 2.2, 2.6, "#304735");
+  if (shooter) {
+    c.fillStyle = "#944d37";
+    c.fillRect(-8, -23, 24, 6);
+    ellipse(c, 19, -7, 10, 6, charging ? "#ff633f" : "#944d37");
+    c.strokeStyle = charging ? "#ff633f" : "#944d37";
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(0, 0, charging ? 30 : 25, 0, Math.PI * 2);
+    c.stroke();
+  }
   c.restore();
 }
 export function draw(c: CanvasRenderingContext2D, run: Run, now: number) {
@@ -149,19 +161,24 @@ export function draw(c: CanvasRenderingContext2D, run: Run, now: number) {
     c.lineTo(run.targetX, run.targetY + 14);
     c.stroke();
   }
-  for (const d of run.ducks) duck(c, d.x, d.y, d.elite, now);
+  for (const d of run.ducks)
+    duck(c, d.x, d.y, d.elite, now, d.shooter, (d.shotCooldown ?? 1) < 0.4);
+  for (const shot of run.projectiles) {
+    ellipse(c, shot.x, shot.y, 8, 8, "#8d352a");
+    ellipse(c, shot.x, shot.y, 4, 4, "#ffd075");
+  }
   if (run.roar > 0) {
     c.strokeStyle = `rgba(211,124,50,${run.roar * 2})`;
     c.lineWidth = 7;
     c.beginPath();
-    c.arc(run.x, run.y, 160 * (1 - run.roar / 0.35), 0, Math.PI * 2);
+    c.arc(run.x, run.y, run.roarRange * (1 - run.roar / 0.35), 0, Math.PI * 2);
     c.stroke();
   }
   if (run.slash > 0) {
     c.strokeStyle = `rgba(255,255,235,${run.slash * 4})`;
     c.lineWidth = 9;
     c.beginPath();
-    c.arc(run.x, run.y, 85, now * 12, now * 12 + Math.PI * 1.6);
+    c.arc(run.x, run.y, run.clawRange - 15, now * 12, now * 12 + Math.PI * 1.6);
     c.stroke();
   }
   c.globalAlpha = run.invincible > 0 ? 0.5 + Math.sin(now * 35) * 0.3 : 1;

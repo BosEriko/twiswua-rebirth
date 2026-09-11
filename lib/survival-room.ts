@@ -1,5 +1,6 @@
 import {
   createRun,
+  advanceWave,
   dash,
   moveJoystick,
   roar,
@@ -58,16 +59,22 @@ export function createSession(ids: string[], round = 0): Session {
     players[id] = player;
     consumed[id] = { dash: 0, roar: 0 };
   });
-  return { round, world: createRun(), players, consumed };
+  const world = createRun();
+  world.partySize = Math.max(1, ids.length);
+  return { round, world, players, consumed };
 }
 
 export function normalizeSession(session: Session): Session {
   session.world.ducks ??= [];
+  session.world.projectiles ??= [];
+  session.world.upgradeChoices ??= [];
   session.world.particles ??= [];
   session.players ??= {};
   session.consumed ??= {};
   for (const player of Object.values(session.players)) {
     player.ducks = session.world.ducks;
+    player.projectiles = session.world.projectiles;
+    player.upgradeChoices ??= [];
     player.particles = session.world.particles;
   }
   return session;
@@ -98,15 +105,23 @@ export function stepSession(
         ([id]) =>
           members[id]?.input.upgradeRound === session.round &&
           members[id]?.input.upgradeWave === world.wave &&
-          ["claws", "haste", "heart"].includes(members[id]?.input.upgrade),
+          world.upgradeChoices.some(
+            (choice) => choice === members[id]?.input.upgrade,
+          ),
       )
     ) {
       for (const [id, player] of Object.entries(players)) {
         player.phase = "upgrade";
-        if (player.hp <= 0) player.hp = Math.ceil(player.maxHp / 2);
-        upgrade(player, members[id]?.input.upgrade || "heart");
+        if (player.hp <= 0) {
+          player.hp = Math.ceil(player.maxHp / 2);
+          advanceWave(player);
+        } else {
+          player.upgradeChoices = world.upgradeChoices;
+          upgrade(player, members[id].input.upgrade as Upgrade);
+        }
       }
-      upgrade(world, "claws");
+      advanceWave(world);
+      world.partySize = Math.max(1, Object.keys(players).length);
     }
     return;
   }
@@ -141,7 +156,7 @@ export function serializeSession(session: Session) {
     players: Object.fromEntries(
       Object.entries(session.players).map(([id, player]) => [
         id,
-        { ...player, ducks: [], particles: [] },
+        { ...player, ducks: [], particles: [], projectiles: [] },
       ]),
     ),
   };

@@ -54,7 +54,7 @@ test("clearing a wave requires choosing an upgrade before the next wave", () => 
   const run = createRun();
   run.phase = "playing";
   run.spawned = waveSize(1);
-  tick(run, 0.01);
+  tick(run, 0.01, () => 0);
   assert.equal(run.phase, "upgrade");
   const time = run.time;
   tick(run, 0.05);
@@ -70,6 +70,7 @@ test("clearing a wave requires choosing an upgrade before the next wave", () => 
 test("health upgrade heals without exceeding maximum health", () => {
   const run = createRun();
   run.phase = "upgrade";
+  run.upgradeChoices = ["heart", "claws", "haste"];
   run.hp = 90;
   upgrade(run, "heart");
   assert.equal(run.maxHp, 125);
