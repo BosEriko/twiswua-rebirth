@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import {
   createRun,
   dash,
@@ -49,7 +49,7 @@ const formatTime = (seconds: number) =>
     .toString()
     .padStart(2, "0")}`;
 
-export default function Game() {
+export default function Game({ onlineControls }: { onlineControls?: ReactNode }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const helpDialog = useRef<HTMLDialogElement>(null);
   const run = useRef(createRun());
@@ -265,6 +265,7 @@ export default function Game() {
           <span className="edition">FIELD NOTES / 001</span>
         </a>
         <div className="header-actions">
+          {onlineControls}
           <button
             className="music-button"
             aria-label={muted ? "Enable music" : "Mute music"}

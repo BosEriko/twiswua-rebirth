@@ -34,6 +34,35 @@ npm run build
 
 ## Deploy to Vercel
 
-Push this repository to your Git provider, then import it as a new Vercel project. Use the Next.js framework preset with the repository root as the root directory. The build command is `npm run build`. No environment variables, database, or additional services are needed.
+Push this repository to your Git provider, then import it as a new Vercel project. Use the Next.js framework preset with the repository root as the root directory. The build command is `npm run build`. Solo play needs no environment variables or services. Survival online play requires the Firebase configuration below.
 
 The game runs in the browser. Google Fonts enhances typography when available; local sans-serif fallbacks are provided.
+
+## Survival co-op and Google sign-in
+
+`/survival` supports solo play and a shared co-op arena for 2–4 Google-authenticated players. Select **Co-op**, sign in, create a room, and share the eight-character code. Friends join before the host starts. Players share enemies and team kills; each has their own health, movement, dash, roar, and upgrades. All living players must choose an upgrade before the next wave. Fallen players revive at the next wave. Only the host can restart a finished run.
+
+### Firebase setup
+
+1. Create a Firebase project and register a web app in Project settings.
+2. Copy `.env.example` to `.env.local` and fill in the web app configuration. Use the exact Realtime Database URL from the Firebase console, including its region when present. These are public client configuration values; do not use a service-account key.
+3. Enable **Authentication → Sign-in method → Google** and choose a support email. Add your production domain and `localhost` to Authentication's authorized domains. See [Firebase Google sign-in setup](https://firebase.google.com/docs/auth/web/google-signin).
+4. Create a **Realtime Database**. Publish `database.rules.json` in its Rules tab, or use the Firebase CLI: `firebase deploy --only database --project YOUR_PROJECT_ID`. Do not enable public test-mode rules.
+5. Restart the dev server. For deployment, set all five `NEXT_PUBLIC_FIREBASE_*` variables before building, then rebuild/redeploy.
+6. Open `/survival` in two browser profiles with different Google accounts. Create a room in one, join by code in the other, and start from the host. Confirm both see the same enemies, movement, wave changes, and team results.
+
+Solo play remains available without Firebase configuration. Authentication persists through Firebase's browser session handling. Sign out from the co-op lobby after leaving the room. Popup sign-in requires browser popups to be allowed.
+
+The host's browser simulates combat and publishes snapshots to RTDB; other players publish only their own inputs. Rules restrict shared state writes to the host and player writes to their own membership. This is casual co-op, with no trusted-server anti-cheat or competitive leaderboard. Authenticated users with a room code can read that room; room listing is denied. Only display names and game data are stored in rooms, not email addresses or Google tokens.
+
+Closing/leaving the host's room removes it for everyone. RTDB disconnect handlers remove disconnected guests and close disconnected hosts' rooms. Reconnection after a removed membership requires joining a new lobby. Co-op does not pause when a guest switches tabs; movement stops. Keep the host tab visible for smooth simulation. A closed host tab ends the session once Firebase detects the disconnect. See [Firebase connection and presence handling](https://firebase.google.com/docs/database/web/offline-capabilities).
+
+### Database rule integration check
+
+With a current Java runtime and Firebase CLI installed, run:
+
+```sh
+firebase emulators:exec --only auth,database --project demo-twiswua 'node --experimental-strip-types --test tests/firebase.integration.ts'
+```
+
+This uses local test identities to check room ownership, four-player capacity, input validation, lobby-only joining, and deletion permissions. It does not contact production Firebase or test Google's OAuth flow.

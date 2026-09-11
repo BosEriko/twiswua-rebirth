@@ -116,35 +116,56 @@ export function upgrade(run: Run, choice: Upgrade) {
   run.phase = "playing";
 }
 export function tick(run: Run, elapsed: number, random = Math.random) {
+  tickWorld(run, [run], elapsed, random);
+}
+export function tickWorld(
+  run: Run,
+  players: Run[],
+  elapsed: number,
+  random = Math.random,
+) {
   if (run.phase !== "playing") return;
   const dt = Math.min(0.05, Math.max(0, elapsed));
   run.time += dt;
-  run.attack -= dt;
-  run.invincible = Math.max(0, run.invincible - dt);
-  run.slash = Math.max(0, run.slash - dt);
-  run.dashCooldown = Math.max(0, run.dashCooldown - dt);
-  run.roarCooldown = Math.max(0, run.roarCooldown - dt);
-  run.roar = Math.max(0, run.roar - dt);
-  const dashing = run.dash > 0;
-  const dx = dashing
-      ? run.facingX
-      : run.joystick
-        ? run.moveX
-        : run.targetX - run.x,
-    dy = dashing ? run.facingY : run.joystick ? run.moveY : run.targetY - run.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance > (run.joystick || dashing ? 0.01 : 2)) {
-    run.facingX = dx / distance;
-    run.facingY = dy / distance;
-    const step = dashing
-      ? run.speed * 3.5 * dt
-      : run.joystick
-        ? run.speed * Math.min(1, distance) * dt
-        : Math.min(distance, run.speed * dt);
-    run.x = Math.max(30, Math.min(WIDTH - 30, run.x + (dx / distance) * step));
-    run.y = Math.max(30, Math.min(HEIGHT - 30, run.y + (dy / distance) * step));
+  const alive = players.filter((player) => player.hp > 0);
+  for (const player of alive) {
+    player.attack -= dt;
+    player.invincible = Math.max(0, player.invincible - dt);
+    player.slash = Math.max(0, player.slash - dt);
+    player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+    player.roarCooldown = Math.max(0, player.roarCooldown - dt);
+    player.roar = Math.max(0, player.roar - dt);
+    const dashing = player.dash > 0;
+    const dx = dashing
+        ? player.facingX
+        : player.joystick
+          ? player.moveX
+          : player.targetX - player.x,
+      dy = dashing
+        ? player.facingY
+        : player.joystick
+          ? player.moveY
+          : player.targetY - player.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance > (player.joystick || dashing ? 0.01 : 2)) {
+      player.facingX = dx / distance;
+      player.facingY = dy / distance;
+      const step = dashing
+        ? player.speed * 3.5 * dt
+        : player.joystick
+          ? player.speed * Math.min(1, distance) * dt
+          : Math.min(distance, player.speed * dt);
+      player.x = Math.max(
+        30,
+        Math.min(WIDTH - 30, player.x + (dx / distance) * step),
+      );
+      player.y = Math.max(
+        30,
+        Math.min(HEIGHT - 30, player.y + (dy / distance) * step),
+      );
+    }
+    player.dash = Math.max(0, player.dash - dt);
   }
-  run.dash = Math.max(0, run.dash - dt);
   run.spawnClock -= dt;
   if (run.spawned < waveSize(run.wave) && run.spawnClock <= 0) {
     const edge = Math.floor(random() * 4),
@@ -159,38 +180,54 @@ export function tick(run: Run, elapsed: number, random = Math.random) {
     run.spawned++;
     run.spawnClock = Math.max(0.22, 1 - run.wave * 0.055);
   }
-  const strike =
-    run.attack <= 0 &&
-    run.ducks.some((d) => Math.hypot(d.x - run.x, d.y - run.y) < 100);
-  if (strike) {
-    run.attack = run.cooldown;
-    run.slash = 0.2;
+  const striking = alive.filter(
+    (player) =>
+      player.attack <= 0 &&
+      run.ducks.some((d) => Math.hypot(d.x - player.x, d.y - player.y) < 100),
+  );
+  for (const player of striking) {
+    player.attack = player.cooldown;
+    player.slash = 0.2;
   }
   for (const duck of run.ducks) {
-    const x = run.x - duck.x,
-      y = run.y - duck.y,
-      length = Math.hypot(x, y);
-    if (strike && length < 100) {
-      duck.hp -= run.damage;
-      duck.x -= (x / (length || 1)) * 22;
-      duck.y -= (y / (length || 1)) * 22;
+    const targets = alive.map((player) => ({
+      player,
+      x: player.x - duck.x,
+      y: player.y - duck.y,
+      length: Math.hypot(player.x - duck.x, player.y - duck.y),
+    }));
+    for (const { player, x, y, length } of targets) {
+      if (striking.includes(player) && length < 100) {
+        duck.hp -= player.damage;
+        duck.x -= (x / (length || 1)) * 22;
+        duck.y -= (y / (length || 1)) * 22;
+      }
     }
     if (duck.hp <= 0) {
       run.kills++;
       run.particles.push({ x: duck.x, y: duck.y, life: 0.6 });
       continue;
     }
+    const target = targets.reduce<(typeof targets)[number] | undefined>(
+      (nearest, candidate) =>
+        !nearest || candidate.length < nearest.length ? candidate : nearest,
+      undefined,
+    );
+    if (!target) continue;
+    const { x, y, length } = target;
     const speed = Math.min(165, 48 + run.wave * 6) * (duck.elite ? 0.8 : 1);
     duck.x += (x / (length || 1)) * speed * dt;
     duck.y += (y / (length || 1)) * speed * dt;
-    if (length < 32 && run.invincible <= 0) {
-      run.hp = Math.max(0, run.hp - (duck.elite ? 18 : 10));
-      run.invincible = 0.8;
+    for (const { player, length: contactDistance } of targets) {
+      if (contactDistance < 32 && player.invincible <= 0) {
+        player.hp = Math.max(0, player.hp - (duck.elite ? 18 : 10));
+        player.invincible = 0.8;
+      }
     }
   }
   run.ducks = run.ducks.filter((d) => d.hp > 0);
   run.particles = run.particles.filter((p) => (p.life -= dt) > 0);
-  if (run.hp <= 0) run.phase = "over";
+  if (players.every((player) => player.hp <= 0)) run.phase = "over";
   else if (run.spawned === waveSize(run.wave) && run.ducks.length === 0)
     run.phase = "upgrade";
 }

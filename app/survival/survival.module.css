@@ -1,0 +1,198 @@
+.page {
+  display: block;
+  width: 100%;
+  height: 100dvh;
+  overflow: auto;
+  max-width: 1240px;
+  margin: auto;
+  padding: 20px 24px 48px;
+}
+.header,
+.actions,
+.roomBar,
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.header {
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ccd0ba;
+}
+.actions {
+  justify-content: flex-start;
+}
+.button {
+  border: 1px solid #667657;
+  background: #f5f3e5;
+  color: #294634;
+  padding: 10px 14px;
+  border-radius: 5px;
+  font: inherit;
+  cursor: pointer;
+}
+.button:hover {
+  background: #e3e9d0;
+}
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.button[aria-pressed="true"] {
+  background: #294634;
+  color: #fff8df;
+}
+.button:focus-visible,
+.join input:focus-visible {
+  outline: 3px solid #bf722f;
+  outline-offset: 3px;
+}
+.lobby {
+  max-width: 680px;
+  margin: 60px auto;
+}
+.lobby h1 {
+  font-size: clamp(36px, 6vw, 64px);
+  line-height: 1.08;
+  margin: 18px 0;
+}
+.lobby p {
+  line-height: 1.6;
+  margin: 20px 0;
+}
+.join {
+  margin-top: 32px;
+}
+.join label {
+  display: block;
+  margin-bottom: 10px;
+}
+.join input {
+  width: 180px;
+  padding: 12px;
+  font: inherit;
+  letter-spacing: 0.1em;
+  background: #fffbed;
+  border: 1px solid #667657;
+  border-radius: 5px;
+}
+.roomBar {
+  padding: 22px 0;
+}
+.roomBar small {
+  display: block;
+}
+.code {
+  display: block;
+  font-size: 26px;
+  letter-spacing: 0.12em;
+}
+.team {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.team div {
+  border-left: 3px solid #799166;
+  padding-left: 12px;
+  overflow-wrap: anywhere;
+}
+.team span {
+  display: block;
+  font-size: 13px;
+  margin-top: 5px;
+}
+.arena {
+  position: relative;
+  width: 100%;
+  border: 1px solid #a9b293;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.arena canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1000 / 620;
+  touch-action: none;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  gap: 16px;
+  text-align: center;
+  background: #f5f3e5eb;
+  overflow: auto;
+}
+.overlay h2 {
+  font-size: clamp(21px, 3vw, 36px);
+  margin: 0;
+}
+.overlay p {
+  margin: 0;
+}
+.overlay .actions {
+  justify-content: center;
+}
+.status {
+  font-size: 13px;
+  padding: 12px 0;
+}
+.error {
+  padding: 16px;
+  background: #f9e3d6;
+  color: #7c2e1d;
+  border-left: 3px solid #a64429;
+  overflow-wrap: anywhere;
+}
+.controls {
+  display: none;
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .page {
+    padding: 12px 12px 30px;
+  }
+  .header {
+    gap: 12px;
+  }
+  .header .actions {
+    font-size: 12px;
+  }
+  .lobby {
+    margin: 36px auto;
+  }
+  .controls {
+    display: block;
+  }
+  .controls :global(.handheld-controls) {
+    display: block;
+  }
+  .controls :global(.console-system-buttons),
+  .controls :global(.console-hint) {
+    display: none;
+  }
+  .team {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    font-size: 12px;
+    gap: 10px;
+  }
+  .overlay {
+    gap: 8px;
+    font-size: 12px;
+  }
+  .overlay .button {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .button {
+    padding: 8px 10px;
+  }
+}
